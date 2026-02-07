@@ -33,14 +33,25 @@ jobs:
           exit 1
         fi
         echo "Running evaluation on: $TEST_FILE"
-        promptfoo eval -c "$TEST_FILE" --output promptfoo-output/
+        # Create output directory
+        mkdir -p promptfoo-output
+        # Run evaluation - promptfoo saves to .promptfoo/ by default
+        promptfoo eval -c "$TEST_FILE"
+        # Copy results to our output directory for artifacts
+        if [ -d .promptfoo ]; then
+          cp -r .promptfoo/* promptfoo-output/ 2>/dev/null || true
+        fi
+        # Also generate JSON output for easier parsing
+        promptfoo eval -c "$TEST_FILE" --output json > promptfoo-output/results.json 2>&1 || true
     
     - name: Upload results
       uses: actions/upload-artifact@v4
       if: always()
       with:
         name: promptfoo-results
-        path: promptfoo-output/
+        path: |
+          promptfoo-output/
+          .promptfoo/
         retention-days: 30
     
     - name: Comment PR with results
@@ -51,15 +62,36 @@ jobs:
           const fs = require('fs');
           const path = require('path');
           
-          // Try to read summary if available
+          // Try to read summary from .promptfoo directory
+          const resultsPath = '.promptfoo/results.json';
           const summaryPath = 'promptfoo-output/results.json';
-          if (fs.existsSync(summaryPath)) {
-            const summary = JSON.parse(fs.readFileSync(summaryPath, 'utf8'));
+          
+          let summary = null;
+          if (fs.existsSync(resultsPath)) {
+            try {
+              summary = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
+            } catch (e) {
+              console.log('Could not parse results.json');
+            }
+          } else if (fs.existsSync(summaryPath)) {
+            try {
+              summary = JSON.parse(fs.readFileSync(summaryPath, 'utf8'));
+            } catch (e) {
+              console.log('Could not parse promptfoo-output/results.json');
+            }
+          }
+          
+          if (summary && summary.results) {
+            const total = summary.results.length;
+            const pass = summary.results.filter(r => r.success).length;
+            const fail = total - pass;
+            const passRate = total > 0 ? ((pass / total) * 100).toFixed(1) : '0';
+            
             const body = `## Prompt Evaluation Results\n\n` +
-              `- **Total Tests**: ${summary.stats?.total || 'N/A'}\n` +
-              `- **Passed**: ${summary.stats?.pass || 'N/A'}\n` +
-              `- **Failed**: ${summary.stats?.fail || 'N/A'}\n` +
-              `- **Pass Rate**: ${summary.stats?.passRate || 'N/A'}%\n\n` +
+              `- **Total Tests**: ${total}\n` +
+              `- **Passed**: ${pass}\n` +
+              `- **Failed**: ${fail}\n` +
+              `- **Pass Rate**: ${passRate}%\n\n` +
               `[View full results](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID})`;
             
             github.rest.issues.createComment({
@@ -68,4 +100,6 @@ jobs:
               repo: context.repo.repo,
               body: body
             });
+          } else {
+            console.log('No summary data found to comment');
           }
