@@ -1,0 +1,937 @@
+providers:
+- openai:gpt-4o-mini:
+    apiKey: ${OPENAI_API_KEY}
+    temperature: 0.7
+    max_tokens: 4000
+prompts:
+- "You are tasked with generating a product description that adheres strictly to the\
+  \ following guidelines:\n\n1. **Language and Tone**\n   - Use only British English\
+  \ spelling and wordings (e.g., \"flavour\" not \"flavor\").\n   - Maintain a formal,\
+  \ professional, and informative tone throughout the response.\n   - Avoid any casual,\
+  \ subjective, or promotional language, including embellishments or value judgments.\n\
+  \n2. **Flavour List Handling**\n   - Remove duplicate flavour names from any lists,\
+  \ preserving their original order (first occurrence).\n   - Describe flavours in\
+  \ a neutral, non-subjective manner, avoiding promotional adjectives.\n\n3. **Forbidden\
+  \ Words and Synonyms**\n   - Exclude any words or their inflected forms from the\
+  \ provided forbidden list (e.g., mild, organic, amazing).\n   - Provide strictly\
+  \ factual, non-promotional descriptions about the brand.\n\n4. **Health and Hygiene\
+  \ Claims**\n   - Do not mention health or health benefits, directly or indirectly,\
+  \ in any product descriptions.\n\n5. **HTML Compliance**\n   - Ensure all output\
+  \ is correctly wrapped in HTML elements:\n     - Use `<h3>` or `<h4>` for headers.\n\
+  \     - Use `<p>` for paragraphs (or `<ul>` if specified).\n   - Avoid any extraneous\
+  \ or incorrectly nested HTML elements, and do not include quotation marks around\
+  \ HTML tags.\n\n6. **No Value Found Handling**\n   - Exclude the string \"NO_VALUE_FOUND\"\
+  \ from the output.\n   - Adjust adjacent content to maintain grammatical correctness\
+  \ if a value is missing.\n\n7. **Response Structure**\n   - Organize the output\
+  \ into specific named segments:\n     - **segment_1**: Header \"About PRODNAME\"\
+  \ and a corresponding paragraph.\n     - **segment_2**: Header for characteristics\
+  \ of usage and a corresponding paragraph.\n     - **segment_3**: Header and paragraph\
+  \ about Flavour(s).\n     - **segment_5**: Details including \"PRODNAME\", \"Category\"\
+  , \"Flavour\", \"Strength\", \"Uses\", \"Manufacturer\", and \"More about: BRAND\"\
+  .\n     - **segment_short**: A short paragraph with the header \"Short description\
+  \ BRAND_NAME\".\n\n### Example Structure:\n```html\n<h3>About PRODNAME</h3>\n<p>BRANDNAME\
+  \ presents PRODNAME, a FORMAT product...</p>\n\n<h3>Characteristics for usage</h3>\n\
+  <p>This product is designed for use with...</p>\n\n<h3>Flavour(s)</h3>\n<p>Flavour:\
+  \ Strawberry, Lemon</p>\n<p>This product features strawberry and lemon flavours\
+  \ in a neutral profile.</p>\n\n<h3>Product Details</h3>\n<p>PRODNAME, Category,\
+  \ Flavour, Strength, Uses, Manufacturer, More about: BRAND.</p>\n\n<h3>Short description\
+  \ BRAND_NAME</h3>\n<p>This is a brief description of the brand.</p>\n```\n\n###\
+  \ Final Notes:\n- Ensure that each segment is correctly labelled and that the content\
+  \ aligns with the specifications above.\n- The response must be clear, coherent,\
+  \ and free from any subjective language or forbidden words.\n\n**IMPORTANT OUTPUT\
+  \ FORMAT:**\n- Output ONLY raw HTML code, without any markdown code blocks (no ```html\
+  \ or ``` markers)\n- Do NOT wrap your output in code fences or markdown formatting\n\
+  - Output should start directly with <h3> or <h4> tags\n- Output should be plain\
+  \ HTML text that can be directly used\n\n---\n\n### Input:\n{{input}}"
+tests:
+- vars:
+    input: 'Product attributes: NAME_LONG=''Organic Herbal Tea'', BRAND=''Herbal Co'',
+      FORMAT=''Loose Leaf'', DESCRIPTION=''A calming blend known for its soothing
+      properties and subtle herbal flavour.'''
+  assert:
+  - type: contains
+    value: flavour
+  - type: javascript
+    value: '!output.includes(''flavor'') && (output.includes(''herbal'') || output.includes(''soothing''))'
+  - type: javascript
+    value: '!output.includes(''amazing'') && !output.includes(''enjoy'')'
+  - type: javascript
+    value: /<p>.*</p>/.test(output)
+  metadata:
+    spec_requirements:
+    - british-english-and-tone
+    scenario: WHEN writing product descriptions THEN the response SHALL use British
+      English and maintain a formal tone
+    requirement: British English and Tone
+- vars:
+    input: 'Product attributes: NAME_LONG=''Luxury Hand Cream'', BRAND=''SkinSoft'',
+      FORMAT=''Tube'', DESCRIPTION=''This cream hydrates the skin with a rich texture
+      and is suitable for daily use.'''
+  assert:
+  - type: contains
+    value: hydrates
+  - type: javascript
+    value: '!output.includes(''moisturizes'') && output.includes(''rich texture'')'
+  - type: javascript
+    value: '!output.includes(''fantastic'') && !output.includes(''you will love'')'
+  - type: javascript
+    value: /<p>.*</p>/.test(output)
+  metadata:
+    spec_requirements:
+    - british-english-and-tone
+    scenario: WHEN writing product descriptions THEN the response SHALL use British
+      English and maintain a formal tone
+    requirement: British English and Tone
+- vars:
+    input: 'Product attributes: NAME_LONG=''Electric Kettle'', BRAND=''HomeTech'',
+      FORMAT=''Electric'', DESCRIPTION=''The kettle features rapid boiling technology
+      and a large capacity for convenience.'''
+  assert:
+  - type: contains
+    value: boiling
+  - type: javascript
+    value: '!output.includes(''awesome'') && output.includes(''large capacity'')'
+  - type: javascript
+    value: '!output.includes(''best'') && !output.includes(''you must try'')'
+  - type: javascript
+    value: /<p>.*</p>/.test(output)
+  metadata:
+    spec_requirements:
+    - british-english-and-tone
+    scenario: WHEN writing product descriptions THEN the response SHALL use British
+      English and maintain a formal tone
+    requirement: British English and Tone
+- vars:
+    input: 'Product attributes: NAME_LONG=''Cotton Bed Sheets'', BRAND=''ComfortSleep'',
+      FORMAT=''Set'', DESCRIPTION=''These sheets ensure a comfortable sleep experience
+      with breathable cotton material.'''
+  assert:
+  - type: contains
+    value: breathable
+  - type: javascript
+    value: '!output.includes(''softest'') && output.includes(''comfortable sleep experience'')'
+  - type: javascript
+    value: '!output.includes(''greatest'') && !output.includes(''you will adore'')'
+  - type: javascript
+    value: /<p>.*</p>/.test(output)
+  metadata:
+    spec_requirements:
+    - british-english-and-tone
+    scenario: WHEN writing product descriptions THEN the response SHALL use British
+      English and maintain a formal tone
+    requirement: British English and Tone
+- vars:
+    input: 'Product attributes: NAME_LONG=''Stainless Steel Water Bottle'', BRAND=''EcoDrink'',
+      FORMAT=''Bottle'', DESCRIPTION=''Durable and reusable, designed for everyday
+      hydration.'''
+  assert:
+  - type: contains
+    value: durable
+  - type: javascript
+    value: '!output.includes(''unbelievable'') && output.includes(''everyday hydration'')'
+  - type: javascript
+    value: '!output.includes(''incredible'') && !output.includes(''you cannot live
+      without'')'
+  - type: javascript
+    value: /<p>.*</p>/.test(output)
+  metadata:
+    spec_requirements:
+    - british-english-and-tone
+    scenario: WHEN writing product descriptions THEN the response SHALL use British
+      English and maintain a formal tone
+    requirement: British English and Tone
+- vars:
+    input: 'Product attributes: NAME_LONG=''Yoga Mat'', BRAND=''FitLife'', FORMAT=''Mat'',
+      DESCRIPTION=''Offers excellent grip and cushioning for all levels of yoga practice.'''
+  assert:
+  - type: contains
+    value: cushioning
+  - type: javascript
+    value: '!output.includes(''fantastic'') && output.includes(''excellent grip'')'
+  - type: javascript
+    value: '!output.includes(''must-have'') && !output.includes(''you will appreciate'')'
+  - type: javascript
+    value: /<p>.*</p>/.test(output)
+  metadata:
+    spec_requirements:
+    - british-english-and-tone
+    scenario: WHEN writing product descriptions THEN the response SHALL use British
+      English and maintain a formal tone
+    requirement: British English and Tone
+- vars:
+    input: 'Product attributes: NAME_LONG=''Bluetooth Headphones'', BRAND=''SoundMax'',
+      FORMAT=''Wireless'', DESCRIPTION=''These headphones provide high-quality sound
+      and comfort for extended listening periods.'''
+  assert:
+  - type: contains
+    value: high-quality
+  - type: javascript
+    value: '!output.includes(''best'') && output.includes(''extended listening periods'')'
+  - type: javascript
+    value: '!output.includes(''incredible'') && !output.includes(''you will love them'')'
+  - type: javascript
+    value: /<p>.*</p>/.test(output)
+  metadata:
+    spec_requirements:
+    - british-english-and-tone
+    scenario: WHEN writing product descriptions THEN the response SHALL use British
+      English and maintain a formal tone
+    requirement: British English and Tone
+- vars:
+    input: 'Product attributes: NAME_LONG=''Fruit Blend'', BRAND=''FreshFruits'',
+      FORMAT=''Liquid'', FLAVOURS=''Apple, Banana, Apple, Cherry, Banana'''
+  assert:
+  - type: javascript
+    value: output.includes('Apple') && output.includes('Banana') && output.includes('Cherry')
+  - type: javascript
+    value: output.split(',').length === 3
+  - type: javascript
+    value: '!output.includes(''delicious'') && !output.includes(''tasty'')'
+  - type: javascript
+    value: '/<p>Flavour: .*</p>/.test(output) && /<p>.*</p>/.test(output)'
+  metadata:
+    spec_requirements:
+    - flavour-list-handling
+    scenario: WHEN preparing a flavour list THEN the response SHALL list unique flavour
+      names
+    requirement: Duplicate Filtering
+- vars:
+    input: 'Product attributes: NAME_LONG=''Citrus Splash'', BRAND=''CitrusCo'', FORMAT=''Juice'',
+      FLAVOURS=''Lemon, Lime, Grapefruit, Lemon'''
+  assert:
+  - type: javascript
+    value: output.includes('Lemon') && output.includes('Lime') && output.includes('Grapefruit')
+  - type: javascript
+    value: output.split(',').length === 3
+  - type: javascript
+    value: '!output.includes(''refreshing'') && !output.includes(''zesty'')'
+  - type: javascript
+    value: '/<p>Flavour: .*</p>/.test(output) && /<p>.*</p>/.test(output)'
+  metadata:
+    spec_requirements:
+    - flavour-list-handling
+    scenario: WHEN preparing a flavour list THEN the response SHALL list unique flavour
+      names
+    requirement: Duplicate Filtering
+- vars:
+    input: 'Product attributes: NAME_LONG=''Berry Blast'', BRAND=''BerryBest'', FORMAT=''Smoothie'',
+      FLAVOURS=''Strawberry, Raspberry, Blueberry, Strawberry, Raspberry'''
+  assert:
+  - type: javascript
+    value: output.includes('Strawberry') && output.includes('Raspberry') && output.includes('Blueberry')
+  - type: javascript
+    value: output.split(',').length === 3
+  - type: javascript
+    value: '!output.includes(''amazing'') && !output.includes(''sweet'')'
+  - type: javascript
+    value: '/<p>Flavour: .*</p>/.test(output) && /<p>.*</p>/.test(output)'
+  metadata:
+    spec_requirements:
+    - flavour-list-handling
+    scenario: WHEN preparing a flavour list THEN the response SHALL list unique flavour
+      names
+    requirement: Duplicate Filtering
+- vars:
+    input: 'Product attributes: NAME_LONG=''Tropical Mix'', BRAND=''TropiGoods'',
+      FORMAT=''Pouch'', FLAVOURS=''Mango, Pineapple, Coconut, Coconut'''
+  assert:
+  - type: javascript
+    value: output.includes('Mango') && output.includes('Pineapple') && output.includes('Coconut')
+  - type: javascript
+    value: output.split(',').length === 3
+  - type: javascript
+    value: '!output.includes(''exotic'') && !output.includes(''rich'')'
+  - type: javascript
+    value: '/<p>Flavour: .*</p>/.test(output) && /<p>.*</p>/.test(output)'
+  metadata:
+    spec_requirements:
+    - flavour-list-handling
+    scenario: WHEN preparing a flavour list THEN the response SHALL list unique flavour
+      names
+    requirement: Duplicate Filtering
+- vars:
+    input: 'Product attributes: NAME_LONG=''Chocolate Delight'', BRAND=''ChocoLovers'',
+      FORMAT=''Bar'', FLAVOURS=''Chocolate, Hazelnut, Almond, Chocolate'''
+  assert:
+  - type: javascript
+    value: output.includes('Chocolate') && output.includes('Hazelnut') && output.includes('Almond')
+  - type: javascript
+    value: output.split(',').length === 3
+  - type: javascript
+    value: '!output.includes(''indulgent'') && !output.includes(''rich'')'
+  - type: javascript
+    value: '/<p>Flavour: .*</p>/.test(output) && /<p>.*</p>/.test(output)'
+  metadata:
+    spec_requirements:
+    - flavour-list-handling
+    scenario: WHEN preparing a flavour list THEN the response SHALL list unique flavour
+      names
+    requirement: Duplicate Filtering
+- vars:
+    input: 'Product attributes: NAME_LONG=''Nut Medley'', BRAND=''NuttyGood'', FORMAT=''Snack'',
+      FLAVOURS=''Almond, Cashew, Almond, Walnut'''
+  assert:
+  - type: javascript
+    value: output.includes('Almond') && output.includes('Cashew') && output.includes('Walnut')
+  - type: javascript
+    value: output.split(',').length === 3
+  - type: javascript
+    value: '!output.includes(''special'') && !output.includes(''unique'')'
+  - type: javascript
+    value: '/<p>Flavour: .*</p>/.test(output) && /<p>.*</p>/.test(output)'
+  metadata:
+    spec_requirements:
+    - flavour-list-handling
+    scenario: WHEN preparing a flavour list THEN the response SHALL list unique flavour
+      names
+    requirement: Duplicate Filtering
+- vars:
+    input: 'Product attributes: NAME_LONG=''Spicy Salsa'', BRAND=''SalsaFiesta'',
+      FORMAT=''Dip'', FLAVOURS=''Tomato, Jalapeno, Onion, Tomato, Jalapeno'''
+  assert:
+  - type: javascript
+    value: output.includes('Tomato') && output.includes('Jalapeno') && output.includes('Onion')
+  - type: javascript
+    value: output.split(',').length === 3
+  - type: javascript
+    value: '!output.includes(''zesty'') && !output.includes(''spicy'')'
+  - type: javascript
+    value: '/<p>Flavour: .*</p>/.test(output) && /<p>.*</p>/.test(output)'
+  metadata:
+    spec_requirements:
+    - flavour-list-handling
+    scenario: WHEN preparing a flavour list THEN the response SHALL list unique flavour
+      names
+    requirement: Duplicate Filtering
+- vars:
+    input: 'Product attributes: NAME_LONG=''Organic Juice'', BRAND=''JuiceCo'', FORMAT=''Bottle'',
+      DESCRIPTION=''A refreshing beverage made from juice.'''
+  assert:
+  - type: javascript
+    value: '!output.includes(''organic'') && !output.includes(''fresh'')'
+  - type: javascript
+    value: '!output.includes(''amazing'') && !output.includes(''quality'')'
+  - type: javascript
+    value: /<p>.*</p>/.test(output)
+  metadata:
+    spec_requirements:
+    - forbidden-words-and-synonyms
+    scenario: WHEN selecting descriptive language THEN the response SHALL exclude
+      forbidden words
+    requirement: Forbidden Word Exclusion
+- vars:
+    input: 'Product attributes: NAME_LONG=''Energy Drink'', BRAND=''BoostX'', FORMAT=''Can'',
+      DESCRIPTION=''A drink that provides energy.'''
+  assert:
+  - type: javascript
+    value: '!output.includes(''energizing'') && !output.includes(''light'')'
+  - type: javascript
+    value: '!output.includes(''sensational'') && output.includes(''provides energy'')'
+  - type: javascript
+    value: /<p>.*</p>/.test(output)
+  metadata:
+    spec_requirements:
+    - forbidden-words-and-synonyms
+    scenario: WHEN selecting descriptive language THEN the response SHALL exclude
+      forbidden words
+    requirement: Forbidden Word Exclusion
+- vars:
+    input: 'Product attributes: NAME_LONG=''Protein Bar'', BRAND=''NutriBar'', FORMAT=''Wrapper'',
+      DESCRIPTION=''Contains protein and fiber.'''
+  assert:
+  - type: javascript
+    value: '!output.includes(''natural'') && !output.includes(''safe'')'
+  - type: javascript
+    value: '!output.includes(''high-quality'') && output.includes(''contains protein'')'
+  - type: javascript
+    value: /<p>.*</p>/.test(output)
+  metadata:
+    spec_requirements:
+    - forbidden-words-and-synonyms
+    scenario: WHEN selecting descriptive language THEN the response SHALL exclude
+      forbidden words
+    requirement: Forbidden Word Exclusion
+- vars:
+    input: 'Product attributes: NAME_LONG=''Vegan Snack'', BRAND=''SnackTime'', FORMAT=''Box'',
+      DESCRIPTION=''A snack made for vegans.'''
+  assert:
+  - type: javascript
+    value: '!output.includes(''amazing'') && !output.includes(''fresh'')'
+  - type: javascript
+    value: '!output.includes(''sensational'') && output.includes(''made for vegans'')'
+  - type: javascript
+    value: /<p>.*</p>/.test(output)
+  metadata:
+    spec_requirements:
+    - forbidden-words-and-synonyms
+    scenario: WHEN selecting descriptive language THEN the response SHALL exclude
+      forbidden words
+    requirement: Forbidden Word Exclusion
+- vars:
+    input: 'Product attributes: NAME_LONG=''Gourmet Coffee'', BRAND=''BrewMasters'',
+      FORMAT=''Bag'', DESCRIPTION=''Rich coffee sourced from the best beans.'''
+  assert:
+  - type: javascript
+    value: '!output.includes(''gourmet'') && !output.includes(''best'')'
+  - type: javascript
+    value: '!output.includes(''light'') && output.includes(''sourced from the beans'')'
+  - type: javascript
+    value: /<p>.*</p>/.test(output)
+  metadata:
+    spec_requirements:
+    - forbidden-words-and-synonyms
+    scenario: WHEN selecting descriptive language THEN the response SHALL exclude
+      forbidden words
+    requirement: Forbidden Word Exclusion
+- vars:
+    input: 'Product attributes: NAME_LONG=''Herbal Tea'', BRAND=''TeaNest'', FORMAT=''Box'',
+      DESCRIPTION=''Contains various herbs and spices.'''
+  assert:
+  - type: javascript
+    value: '!output.includes(''natural'') && !output.includes(''amazing'')'
+  - type: javascript
+    value: '!output.includes(''quality'') && output.includes(''contains various herbs'')'
+  - type: javascript
+    value: /<p>.*</p>/.test(output)
+  metadata:
+    spec_requirements:
+    - forbidden-words-and-synonyms
+    scenario: WHEN selecting descriptive language THEN the response SHALL exclude
+      forbidden words
+    requirement: Forbidden Word Exclusion
+- vars:
+    input: 'Product attributes: NAME_LONG=''Spicy Chips'', BRAND=''CrunchyMunch'',
+      FORMAT=''Bag'', DESCRIPTION=''Chips with a spicy flavor.'''
+  assert:
+  - type: javascript
+    value: '!output.includes(''light'') && !output.includes(''amazing'')'
+  - type: javascript
+    value: '!output.includes(''sensational'') && output.includes(''with a spicy flavor'')'
+  - type: javascript
+    value: /<p>.*</p>/.test(output)
+  metadata:
+    spec_requirements:
+    - forbidden-words-and-synonyms
+    scenario: WHEN selecting descriptive language THEN the response SHALL exclude
+      forbidden words
+    requirement: Forbidden Word Exclusion
+- vars:
+    input: 'Product attributes: NAME_LONG=''Eco-Friendly Cleaner'', BRAND=''CleanHome'',
+      FORMAT=''Liquid'''
+  assert:
+  - type: javascript
+    value: '!output.includes(''health'') && !output.includes(''wellbeing'') && !output.includes(''benefits'')'
+  - type: javascript
+    value: /<h[34]>.*</h[34]>/.test(output) && /<p>.*</p>/.test(output)
+  metadata:
+    spec_requirements:
+    - health-and-hygiene-claims
+    scenario: WHEN writing product descriptions THEN the response SHALL avoid health
+      claims
+    requirement: No Health Claims
+- vars:
+    input: 'Product attributes: NAME_LONG=''Natural Shampoo'', BRAND=''HairCare'',
+      FORMAT=''Bottle'''
+  assert:
+  - type: javascript
+    value: '!output.includes(''health'') && !output.includes(''wellbeing'') && !output.includes(''benefit'')'
+  - type: javascript
+    value: /<h[34]>.*</h[34]>/.test(output) && /<p>.*</p>/.test(output)
+  metadata:
+    spec_requirements:
+    - health-and-hygiene-claims
+    scenario: WHEN writing product descriptions THEN the response SHALL avoid health
+      claims
+    requirement: No Health Claims
+- vars:
+    input: 'Product attributes: NAME_LONG=''Daily Moisturizer'', BRAND=''SkinGlow'',
+      FORMAT=''Cream'''
+  assert:
+  - type: javascript
+    value: '!output.includes(''improves health'') && !output.includes(''enhances wellbeing'')'
+  - type: javascript
+    value: /<h[34]>.*</h[34]>/.test(output) && /<p>.*</p>/.test(output)
+  metadata:
+    spec_requirements:
+    - health-and-hygiene-claims
+    scenario: WHEN writing product descriptions THEN the response SHALL avoid health
+      claims
+    requirement: No Health Claims
+- vars:
+    input: 'Product attributes: NAME_LONG=''Herbal Tea Blend'', BRAND=''TeaTime'',
+      FORMAT=''Loose Leaf'''
+  assert:
+  - type: javascript
+    value: '!output.includes(''health'') && !output.includes(''benefits'')'
+  - type: javascript
+    value: /<h[34]>.*</h[34]>/.test(output) && /<p>.*</p>/.test(output)
+  metadata:
+    spec_requirements:
+    - health-and-hygiene-claims
+    scenario: WHEN writing product descriptions THEN the response SHALL avoid health
+      claims
+    requirement: No Health Claims
+- vars:
+    input: 'Product attributes: NAME_LONG=''Vitamin C Serum'', BRAND=''GlowSkin'',
+      FORMAT=''Dropper'''
+  assert:
+  - type: javascript
+    value: '!output.includes(''health'') && !output.includes(''wellbeing'')'
+  - type: javascript
+    value: /<h[34]>.*</h[34]>/.test(output) && /<p>.*</p>/.test(output)
+  metadata:
+    spec_requirements:
+    - health-and-hygiene-claims
+    scenario: WHEN writing product descriptions THEN the response SHALL avoid health
+      claims
+    requirement: No Health Claims
+- vars:
+    input: 'Product attributes: NAME_LONG=''Organic Body Wash'', BRAND=''FreshScents'',
+      FORMAT=''Gel'''
+  assert:
+  - type: javascript
+    value: '!output.includes(''health benefits'') && !output.includes(''promotes wellbeing'')'
+  - type: javascript
+    value: /<h[34]>.*</h[34]>/.test(output) && /<p>.*</p>/.test(output)
+  metadata:
+    spec_requirements:
+    - health-and-hygiene-claims
+    scenario: WHEN writing product descriptions THEN the response SHALL avoid health
+      claims
+    requirement: No Health Claims
+- vars:
+    input: 'Product attributes: NAME_LONG=''Non-Toxic Paint'', BRAND=''EcoPaint'',
+      FORMAT=''Liquid'''
+  assert:
+  - type: javascript
+    value: '!output.includes(''health'') && !output.includes(''benefits'')'
+  - type: javascript
+    value: /<h[34]>.*</h[34]>/.test(output) && /<p>.*</p>/.test(output)
+  metadata:
+    spec_requirements:
+    - health-and-hygiene-claims
+    scenario: WHEN writing product descriptions THEN the response SHALL avoid health
+      claims
+    requirement: No Health Claims
+- vars:
+    input: 'Product attributes: NAME_LONG=''Amazing Widget'', BRAND=''WidgetCo'',
+      FORMAT=''Box'''
+  assert:
+  - type: javascript
+    value: /<h3>.*<\/h3>/.test(output) && /<p>.*<\/p>/.test(output)
+  - type: javascript
+    value: '!output.includes(''"'')'
+  - type: javascript
+    value: output.includes('<p>') && output.split('<p>').length === 2
+  metadata:
+    spec_requirements:
+    - html-compliance
+    scenario: WHEN providing product attributes THEN correct HTML structure is used
+    requirement: Proper HTML Element Use
+- vars:
+    input: 'Product attributes: NAME_LONG=''Super Gadget'', BRAND=''GadgetCorp'',
+      FORMAT=''Bottle'''
+  assert:
+  - type: javascript
+    value: /<h3>.*<\/h3>/.test(output) && /<p>.*<\/p>/.test(output)
+  - type: javascript
+    value: '!output.includes(''<h2>'')'
+  - type: javascript
+    value: '!output.includes(''"'')'
+  metadata:
+    spec_requirements:
+    - html-compliance
+    scenario: WHEN outputting product details THEN HTML tags are correctly used
+    requirement: Proper HTML Element Use
+- vars:
+    input: 'Product attributes: NAME_LONG=''Eco-Friendly Tool'', BRAND=''EcoTools'',
+      FORMAT=''Set'''
+  assert:
+  - type: javascript
+    value: /<h4>.*<\/h4>/.test(output) && /<p>.*<\/p>/.test(output)
+  - type: javascript
+    value: '!output.includes(''<h1>'') && !output.includes(''<h2>'')'
+  - type: javascript
+    value: '!output.includes(''"'')'
+  metadata:
+    spec_requirements:
+    - html-compliance
+    scenario: WHEN describing eco-friendly products THEN proper HTML structure is
+      maintained
+    requirement: Proper HTML Element Use
+- vars:
+    input: 'Product attributes: NAME_LONG=''Luxury Soap'', BRAND=''SoapLux'', FORMAT=''Bar'''
+  assert:
+  - type: javascript
+    value: /<h3>.*<\/h3>/.test(output) && /<p>.*<\/p>/.test(output)
+  - type: javascript
+    value: '!output.includes(''<div>'')'
+  - type: javascript
+    value: '!output.includes(''"'')'
+  metadata:
+    spec_requirements:
+    - html-compliance
+    scenario: WHEN providing luxury product details THEN the response is formatted
+      correctly
+    requirement: Proper HTML Element Use
+- vars:
+    input: 'Product attributes: NAME_LONG=''Classic Novel'', BRAND=''BookHouse'',
+      FORMAT=''Hardcover'''
+  assert:
+  - type: javascript
+    value: /<h3>.*<\/h3>/.test(output) && /<p>.*<\/p>/.test(output)
+  - type: javascript
+    value: '!output.includes(''<p><h3>'')'
+  - type: javascript
+    value: '!output.includes(''"'')'
+  metadata:
+    spec_requirements:
+    - html-compliance
+    scenario: WHEN describing classic novels THEN correct HTML elements are utilized
+    requirement: Proper HTML Element Use
+- vars:
+    input: 'Product attributes: NAME_LONG=''Gourmet Coffee'', BRAND=''BrewMasters'',
+      FORMAT=''Ground'''
+  assert:
+  - type: javascript
+    value: /<h3>.*<\/h3>/.test(output) && /<p>.*<\/p>/.test(output)
+  - type: javascript
+    value: '!output.includes(''<h1>'')'
+  - type: javascript
+    value: '!output.includes(''"'')'
+  metadata:
+    spec_requirements:
+    - html-compliance
+    scenario: WHEN detailing gourmet products THEN appropriate HTML structure is preserved
+    requirement: Proper HTML Element Use
+- vars:
+    input: 'Product attributes: NAME_LONG=''Smartphone'', BRAND=''TechCorp'', FORMAT=''Smartphone'''
+  assert:
+  - type: javascript
+    value: /<h3>.*<\/h3>/.test(output) && /<p>.*<\/p>/.test(output)
+  - type: javascript
+    value: '!output.includes(''<h2>'')'
+  - type: javascript
+    value: '!output.includes(''"'')'
+  metadata:
+    spec_requirements:
+    - html-compliance
+    scenario: WHEN presenting smartphone details THEN correct HTML tags are applied
+    requirement: Proper HTML Element Use
+- vars:
+    input: 'Product attributes: NAME_LONG=''Organic Tea'', BRAND=''TeaTime'', FORMAT=''Loose
+      Leaf'''
+  assert:
+  - type: javascript
+    value: /<h3>.*<\/h3>/.test(output) && /<p>.*<\/p>/.test(output)
+  - type: javascript
+    value: '!output.includes(''<h2>'')'
+  - type: javascript
+    value: '!output.includes(''"'')'
+  metadata:
+    spec_requirements:
+    - html-compliance
+    scenario: WHEN describing organic products THEN HTML is formatted correctly
+    requirement: Proper HTML Element Use
+- vars:
+    input: 'Product attributes: NAME_LONG=''Delicious Snack'', BRAND=''SnackCo'',
+      FLAVOUR=''NO_VALUE_FOUND'', FORMAT=''Pack'''
+  assert:
+  - type: javascript
+    value: '!output.includes(''NO_VALUE_FOUND'')'
+  - type: javascript
+    value: output.includes('Flavour:') && !output.includes('NO_VALUE_FOUND')
+  - type: javascript
+    value: output.match(/<p>.*Flavour:.*<\/p>/) !== null
+  metadata:
+    spec_requirements:
+    - no-value-found-handling
+    scenario: WHEN encountering NO_VALUE_FOUND for FLAVOUR THEN output should not
+      contain NO_VALUE_FOUND
+    requirement: Exclusion and Text Adjustment
+- vars:
+    input: 'Product attributes: NAME_LONG=''Eco-Friendly Bag'', BRAND=''EcoBrand'',
+      SIZE=''NO_VALUE_FOUND'', MATERIAL=''Cotton'''
+  assert:
+  - type: javascript
+    value: '!output.includes(''NO_VALUE_FOUND'')'
+  - type: javascript
+    value: 'output.includes(''Size:'') && output.includes(''Material: Cotton'')'
+  - type: javascript
+    value: 'output.match(/<p>.*Size:.*Material: Cotton<\/p>/) !== null'
+  metadata:
+    spec_requirements:
+    - no-value-found-handling
+    scenario: WHEN encountering NO_VALUE_FOUND for SIZE THEN output should not contain
+      NO_VALUE_FOUND
+    requirement: Exclusion and Text Adjustment
+- vars:
+    input: 'Product attributes: NAME_LONG=''Gourmet Coffee'', BRAND=''CoffeeCo'',
+      ROAST=''NO_VALUE_FOUND'', FORMAT=''Ground'''
+  assert:
+  - type: javascript
+    value: '!output.includes(''NO_VALUE_FOUND'')'
+  - type: javascript
+    value: 'output.includes(''Roast:'') && output.includes(''Format: Ground'')'
+  - type: javascript
+    value: 'output.match(/<p>.*Roast:.*Format: Ground<\/p>/) !== null'
+  metadata:
+    spec_requirements:
+    - no-value-found-handling
+    scenario: WHEN encountering NO_VALUE_FOUND for ROAST THEN output should not contain
+      NO_VALUE_FOUND
+    requirement: Exclusion and Text Adjustment
+- vars:
+    input: 'Product attributes: NAME_LONG=''Winter Jacket'', BRAND=''WarmWear'', COLOR=''NO_VALUE_FOUND'',
+      SIZE=''L'''
+  assert:
+  - type: javascript
+    value: '!output.includes(''NO_VALUE_FOUND'')'
+  - type: javascript
+    value: 'output.includes(''Size: L'') && !output.includes(''Color: NO_VALUE_FOUND'')'
+  - type: javascript
+    value: 'output.match(/<p>.*Size: L.*<\/p>/) !== null'
+  metadata:
+    spec_requirements:
+    - no-value-found-handling
+    scenario: WHEN encountering NO_VALUE_FOUND for COLOR THEN output should not contain
+      NO_VALUE_FOUND
+    requirement: Exclusion and Text Adjustment
+- vars:
+    input: 'Product attributes: NAME_LONG=''Organic Honey'', BRAND=''SweetNature'',
+      FLAVOUR=''NO_VALUE_FOUND'', FORMAT=''Jar'''
+  assert:
+  - type: javascript
+    value: '!output.includes(''NO_VALUE_FOUND'')'
+  - type: javascript
+    value: 'output.includes(''Format: Jar'') && !output.includes(''Flavour: NO_VALUE_FOUND'')'
+  - type: javascript
+    value: 'output.match(/<p>.*Format: Jar.*<\/p>/) !== null'
+  metadata:
+    spec_requirements:
+    - no-value-found-handling
+    scenario: WHEN encountering NO_VALUE_FOUND for FLAVOUR THEN output should not
+      contain NO_VALUE_FOUND
+    requirement: Exclusion and Text Adjustment
+- vars:
+    input: 'Product attributes: NAME_LONG=''Bluetooth Speaker'', BRAND=''SoundCo'',
+      BATTERY=''NO_VALUE_FOUND'', WARRANTY=''1 Year'''
+  assert:
+  - type: javascript
+    value: '!output.includes(''NO_VALUE_FOUND'')'
+  - type: javascript
+    value: 'output.includes(''Warranty: 1 Year'') && !output.includes(''Battery: NO_VALUE_FOUND'')'
+  - type: javascript
+    value: 'output.match(/<p>.*Warranty: 1 Year.*<\/p>/) !== null'
+  metadata:
+    spec_requirements:
+    - no-value-found-handling
+    scenario: WHEN encountering NO_VALUE_FOUND for BATTERY THEN output should not
+      contain NO_VALUE_FOUND
+    requirement: Exclusion and Text Adjustment
+- vars:
+    input: 'Product attributes: NAME_LONG=''Yoga Mat'', BRAND=''FitBrand'', THICKNESS=''NO_VALUE_FOUND'',
+      MATERIAL=''Rubber'''
+  assert:
+  - type: javascript
+    value: '!output.includes(''NO_VALUE_FOUND'')'
+  - type: javascript
+    value: 'output.includes(''Material: Rubber'') && !output.includes(''Thickness:
+      NO_VALUE_FOUND'')'
+  - type: javascript
+    value: 'output.match(/<p>.*Material: Rubber.*<\/p>/) !== null'
+  metadata:
+    spec_requirements:
+    - no-value-found-handling
+    scenario: WHEN encountering NO_VALUE_FOUND for THICKNESS THEN output should not
+      contain NO_VALUE_FOUND
+    requirement: Exclusion and Text Adjustment
+- vars:
+    input: 'Product attributes: NAME_LONG=''Ultra Pain Relief'', BRAND=''ReliefCo'',
+      FORMAT=''Gel'', CATEGORY=''Pain Relief'', STRENGTH=''200mg'', USES=''Temporary
+      relief of minor aches and pains.'''
+  assert:
+  - type: javascript
+    value: output.includes('<h3>About Ultra Pain Relief</h3>') && output.includes('<p>ReliefCo
+      presents Ultra Pain Relief, a Gel product...</p>')
+  - type: javascript
+    value: output.includes('<h3>Characteristics of Usage</h3>') && output.includes('<p>Temporary
+      relief of minor aches and pains.</p>')
+  - type: javascript
+    value: output.includes('<h3>Flavour(s)</h3>') && output.includes('<p>Neutral flavour.</p>')
+  - type: javascript
+    value: 'output.includes(''<h3>Product Details</h3>'') && output.includes(''Ultra
+      Pain Relief'') && output.includes(''Pain Relief'') && output.includes(''200mg'')
+      && output.includes(''Temporary relief of minor aches and pains.'') && output.includes(''ReliefCo'')
+      && output.includes(''More about: ReliefCo'')'
+  - type: javascript
+    value: output.includes('<h3>Short description ReliefCo</h3>') && output.includes('<p>Effective
+      pain relief gel.</p>')
+  - type: javascript
+    value: '!output.includes(''"'')'
+  - type: javascript
+    value: /<h[34]>.*<\/h[34]>/.test(output) && /<p>.*<\/p>/.test(output)
+  metadata:
+    spec_requirements:
+    - response-structure
+    scenario: WHEN generating product description THEN structured output with correct
+      segments
+    requirement: Segmented Output
+- vars:
+    input: 'Product attributes: NAME_LONG=''Herbal Tea'', BRAND=''TeaTime'', FORMAT=''Loose
+      Leaf'', CATEGORY=''Beverage'', FLAVOUR=''Chamomile'', STRENGTH=''N/A'', USES=''Relaxation
+      and calming effect.'''
+  assert:
+  - type: javascript
+    value: output.includes('<h3>About Herbal Tea</h3>') && output.includes('<p>TeaTime
+      presents Herbal Tea, a Loose Leaf product...</p>')
+  - type: javascript
+    value: output.includes('<h3>Characteristics of Usage</h3>') && output.includes('<p>Relaxation
+      and calming effect.</p>')
+  - type: javascript
+    value: output.includes('<h3>Flavour(s)</h3>') && output.includes('<p>Chamomile
+      flavour.</p>')
+  - type: javascript
+    value: 'output.includes(''<h3>Product Details</h3>'') && output.includes(''Herbal
+      Tea'') && output.includes(''Beverage'') && output.includes(''Chamomile'') &&
+      output.includes(''Relaxation and calming effect.'') && output.includes(''TeaTime'')
+      && output.includes(''More about: TeaTime'')'
+  - type: javascript
+    value: output.includes('<h3>Short description TeaTime</h3>') && output.includes('<p>Calming
+      herbal tea.</p>')
+  - type: javascript
+    value: '!output.includes(''"'')'
+  - type: javascript
+    value: /<h[34]>.*<\/h[34]>/.test(output) && /<p>.*<\/p>/.test(output)
+  metadata:
+    spec_requirements:
+    - response-structure
+    scenario: WHEN generating product description THEN structured output with correct
+      segments
+    requirement: Segmented Output
+- vars:
+    input: 'Product attributes: NAME_LONG=''Energy Booster'', BRAND=''VitaPlus'',
+      FORMAT=''Powder'', CATEGORY=''Supplement'', FLAVOUR=''Berry'', STRENGTH=''300mg'',
+      USES=''Boost energy and focus.'''
+  assert:
+  - type: javascript
+    value: output.includes('<h3>About Energy Booster</h3>') && output.includes('<p>VitaPlus
+      presents Energy Booster, a Powder product...</p>')
+  - type: javascript
+    value: output.includes('<h3>Characteristics of Usage</h3>') && output.includes('<p>Boost
+      energy and focus.</p>')
+  - type: javascript
+    value: output.includes('<h3>Flavour(s)</h3>') && output.includes('<p>Berry flavour.</p>')
+  - type: javascript
+    value: 'output.includes(''<h3>Product Details</h3>'') && output.includes(''Energy
+      Booster'') && output.includes(''Supplement'') && output.includes(''Berry'')
+      && output.includes(''Boost energy and focus.'') && output.includes(''VitaPlus'')
+      && output.includes(''More about: VitaPlus'')'
+  - type: javascript
+    value: output.includes('<h3>Short description VitaPlus</h3>') && output.includes('<p>Powerful
+      energy supplement.</p>')
+  - type: javascript
+    value: '!output.includes(''"'')'
+  - type: javascript
+    value: /<h[34]>.*<\/h[34]>/.test(output) && /<p>.*<\/p>/.test(output)
+  metadata:
+    spec_requirements:
+    - response-structure
+    scenario: WHEN generating product description THEN structured output with correct
+      segments
+    requirement: Segmented Output
+- vars:
+    input: 'Product attributes: NAME_LONG=''Cleansing Foam'', BRAND=''CleanCo'', FORMAT=''Foam'',
+      CATEGORY=''Skincare'', FLAVOUR=''Lemon'', STRENGTH=''N/A'', USES=''Deep cleaning
+      and refreshing.'''
+  assert:
+  - type: javascript
+    value: output.includes('<h3>About Cleansing Foam</h3>') && output.includes('<p>CleanCo
+      presents Cleansing Foam, a Foam product...</p>')
+  - type: javascript
+    value: output.includes('<h3>Characteristics of Usage</h3>') && output.includes('<p>Deep
+      cleaning and refreshing.</p>')
+  - type: javascript
+    value: output.includes('<h3>Flavour(s)</h3>') && output.includes('<p>Lemon flavour.</p>')
+  - type: javascript
+    value: 'output.includes(''<h3>Product Details</h3>'') && output.includes(''Cleansing
+      Foam'') && output.includes(''Skincare'') && output.includes(''Lemon'') && output.includes(''Deep
+      cleaning and refreshing.'') && output.includes(''CleanCo'') && output.includes(''More
+      about: CleanCo'')'
+  - type: javascript
+    value: output.includes('<h3>Short description CleanCo</h3>') && output.includes('<p>Refreshing
+      cleansing foam.</p>')
+  - type: javascript
+    value: '!output.includes(''"'')'
+  - type: javascript
+    value: /<h[34]>.*<\/h[34]>/.test(output) && /<p>.*<\/p>/.test(output)
+  metadata:
+    spec_requirements:
+    - response-structure
+    scenario: WHEN generating product description THEN structured output with correct
+      segments
+    requirement: Segmented Output
+- vars:
+    input: 'Product attributes: NAME_LONG=''Daily Multivitamin'', BRAND=''NutriLife'',
+      FORMAT=''Tablet'', CATEGORY=''Nutrition'', FLAVOUR=''Mixed Berry'', STRENGTH=''100mg'',
+      USES=''Supports overall health and wellness.'''
+  assert:
+  - type: javascript
+    value: output.includes('<h3>About Daily Multivitamin</h3>') && output.includes('<p>NutriLife
+      presents Daily Multivitamin, a Tablet product...</p>')
+  - type: javascript
+    value: output.includes('<h3>Characteristics of Usage</h3>') && output.includes('<p>Supports
+      overall health and wellness.</p>')
+  - type: javascript
+    value: output.includes('<h3>Flavour(s)</h3>') && output.includes('<p>Mixed Berry
+      flavour.</p>')
+  - type: javascript
+    value: 'output.includes(''<h3>Product Details</h3>'') && output.includes(''Daily
+      Multivitamin'') && output.includes(''Nutrition'') && output.includes(''Mixed
+      Berry'') && output.includes(''Supports overall health and wellness.'') && output.includes(''NutriLife'')
+      && output.includes(''More about: NutriLife'')'
+  - type: javascript
+    value: output.includes('<h3>Short description NutriLife</h3>') && output.includes('<p>Comprehensive
+      daily multivitamin.</p>')
+  - type: javascript
+    value: '!output.includes(''"'')'
+  - type: javascript
+    value: /<h[34]>.*<\/h[34]>/.test(output) && /<p>.*<\/p>/.test(output)
+  metadata:
+    spec_requirements:
+    - response-structure
+    scenario: WHEN generating product description THEN structured output with correct
+      segments
+    requirement: Segmented Output
+- vars:
+    input: 'Product attributes: NAME_LONG=''Natural Soothing Balm'', BRAND=''PureEssence'',
+      FORMAT=''Balm'', CATEGORY=''Skincare'', FLAVOUR=''Lavender'', STRENGTH=''50mg'',
+      USES=''Soothes and nourishes skin.'''
+  assert:
+  - type: javascript
+    value: output.includes('<h3>About Natural Soothing Balm</h3>') && output.includes('<p>PureEssence
+      presents Natural Soothing Balm, a Balm product...</p>')
+  - type: javascript
+    value: output.includes('<h3>Characteristics of Usage</h3>') && output.includes('<p>Soothes
+      and nourishes skin.</p>')
+  - type: javascript
+    value: output.includes('<h3>Flavour(s)</h3>') && output.includes('<p>Lavender
+      flavour.</p>')
+  - type: javascript
+    value: 'output.includes(''<h3>Product Details</h3>'') && output.includes(''Natural
+      Soothing Balm'') && output.includes(''Skincare'') && output.includes(''Lavender'')
+      && output.includes(''Soothes and nourishes skin.'') && output.includes(''PureEssence'')
+      && output.includes(''More about: PureEssence'')'
+  - type: javascript
+    value: output.includes('<h3>Short description PureEssence</h3>') && output.includes('<p>Natural
+      skin balm.</p>')
+  - type: javascript
+    value: '!output.includes(''"'')'
+  - type: javascript
+    value: /<h[34]>.*<\/h[34]>/.test(output) && /<p>.*<\/p>/.test(output)
+  metadata:
+    spec_requirements:
+    - response-structure
+    scenario: WHEN generating product description THEN structured output with correct
+      segments
+    requirement: Segmented Output

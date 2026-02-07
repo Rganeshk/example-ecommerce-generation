@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# specalign workspace (user-specific)
+# But allow test_cases directory for CI/CD
+.specalign/*
+!.specalign/test_cases/
+!.specalign/test_cases/*.yaml
+!.specalign/test_cases/*.yml
+
+# Environment variables
+.env
+.env.local
+*.key
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test results
+.promptfoo/
+promptfoo-output/
