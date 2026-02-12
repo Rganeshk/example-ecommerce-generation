@@ -85,8 +85,12 @@ The repository includes a GitHub Actions workflow that:
 
 1. Go to **Actions** tab in GitHub
 2. Click on the latest workflow run
-3. Download `promptfoo-results` artifact
-4. Extract and review results
+3. Download the **promptfoo-results** artifact
+4. Extract and open:
+   - **report.html** — interactive promptfoo report
+   - **analysis.html** — summary with **tables and pass-rate bar**, **why tests failed** (per assertion), and **what to fix** (e.g. change prompts or relax assertions)
+   - **SUMMARY.md** — result summary by specification and **recommendations** (based on pass rate and failing specs)
+5. On pull requests, the workflow also posts a comment with pass rate and a short recommendation; the comment links to the run and the artifact.
 
 ## Workflow Commands
 
@@ -101,11 +105,18 @@ specalign generate \
 
 ### Evaluate Locally
 
-```bash
-# Find latest test cases file
-TEST_FILE=$(ls -t .specalign/test_cases/*.yaml | head -1)
+To get **results and recommendations in the terminal** in one go:
 
-# Run promptfoo
+```bash
+./scripts/run-eval-with-summary.sh
+```
+
+This runs the eval, generates `promptfoo-output/SUMMARY.md` (with per-spec stats and recommendations) and `promptfoo-output/analysis.html` (tables, failure reasons, and fix tips), and **prints the summary to the terminal**. It also writes `promptfoo-output/report.html` and `promptfoo-output/results.json`.
+
+To run only promptfoo (no summary/recommendations):
+
+```bash
+TEST_FILE=$(ls -t .specalign/test_cases/*.yaml | head -1)
 promptfoo eval -c "$TEST_FILE"
 ```
 

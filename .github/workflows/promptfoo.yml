@@ -26,27 +26,43 @@ jobs:
       env:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       run: |
-        # Find the latest test cases file
         TEST_FILE=$(ls -t .specalign/test_cases/*.yaml 2>/dev/null | head -1)
         if [ -z "$TEST_FILE" ]; then
           echo "No test cases found. Please run 'specalign generate' first."
           exit 1
         fi
         echo "Running evaluation on: $TEST_FILE"
-        # Create output directory
         mkdir -p promptfoo-output
-        # Run evaluation - promptfoo saves to .promptfoo/ by default
-        promptfoo eval -c "$TEST_FILE"
-        # Copy results to our output directory for artifacts
+        promptfoo eval -c "$TEST_FILE" --output promptfoo-output/report.html --output promptfoo-output/results.json
         if [ -d .promptfoo ]; then
           cp -r .promptfoo/* promptfoo-output/ 2>/dev/null || true
         fi
-        # Also generate JSON output for easier parsing
-        promptfoo eval -c "$TEST_FILE" --output json > promptfoo-output/results.json 2>&1 || true
-    
-    - name: Upload results
-      uses: actions/upload-artifact@v4
+
+    - name: Generate result summary and recommendations
+      run: |
+        TEST_FILE=$(ls -t .specalign/test_cases/*.yaml 2>/dev/null | head -1)
+        if [ -f promptfoo-output/results.json ] && [ -n "$TEST_FILE" ]; then
+          node scripts/generate-summary.js promptfoo-output/results.json "$TEST_FILE" promptfoo-output/SUMMARY.md
+          node scripts/generate-analysis-html.js promptfoo-output/results.json "$TEST_FILE" promptfoo-output/analysis.html
+        else
+          echo "Skipping summary (results.json or test file missing)"
+        fi
+
+    - name: Add analysis to job summary
       if: always()
+      run: |
+        if [ -f promptfoo-output/SUMMARY.md ]; then
+          echo "## Prompt evaluation – analysis" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cat promptfoo-output/SUMMARY.md >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "**Full analysis (tables, why tests failed, what to fix):** Download the \`promptfoo-results\` artifact and open **analysis.html** in a browser." >> $GITHUB_STEP_SUMMARY
+        fi
+
+    - name: Upload results
+      if: always()
+      uses: actions/upload-artifact@v4
       with:
         name: promptfoo-results
         path: |
@@ -81,18 +97,23 @@ jobs:
             }
           }
           
-          if (summary && summary.results) {
-            const total = summary.results.length;
-            const pass = summary.results.filter(r => r.success).length;
+          const res = summary?.results;
+          const results = Array.isArray(res) ? res : (res?.results ?? res?.outputs ?? []);
+          if (results.length > 0) {
+            const total = results.length;
+            const pass = results.filter(r => r.success === true || r.pass === true || (r.gradingResult && r.gradingResult.pass === true)).length;
             const fail = total - pass;
             const passRate = total > 0 ? ((pass / total) * 100).toFixed(1) : '0';
-            
+            const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+            let rec = '';
+            if (passRate < 40) rec = ' Consider semantic assertions and prompt improvements.';
+            else if (passRate < 70) rec = ' Review specs with low pass rate; relax assertions or improve the prompt.';
+            else rec = ' Good baseline; consider adding more tests or tightening critical specs.';
             const body = `## Prompt Evaluation Results\n\n` +
-              `- **Total Tests**: ${total}\n` +
-              `- **Passed**: ${pass}\n` +
-              `- **Failed**: ${fail}\n` +
-              `- **Pass Rate**: ${passRate}%\n\n` +
-              `[View full results](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID})`;
+              `- **Total**: ${total} | **Passed**: ${pass} | **Failed**: ${fail} | **Pass rate**: ${passRate}%\n\n` +
+              `**Recommendation:**${rec}\n\n` +
+              `**View the analysis:** Download the **promptfoo-results** artifact and open **\`analysis.html\`** in a browser for tables, failure reasons, and fix recommendations (e.g. change prompts). The artifact also includes \`report.html\` (interactive) and \`SUMMARY.md\`.\n\n` +
+              `[View run](${runUrl})`;
             
             github.rest.issues.createComment({
               issue_number: context.issue.number,

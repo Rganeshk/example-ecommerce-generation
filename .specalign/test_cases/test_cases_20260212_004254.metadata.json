@@ -1,0 +1,25 @@
+{
+  "generation": {
+    "timestamp": "2026-02-12T00:42:54.265009+00:00",
+    "model": ".specalign/models/default.yaml",
+    "total_test_cases": 49,
+    "specs_covered": [
+      "british-english-and-tone",
+      "flavour-list-handling",
+      "forbidden-words-and-synonyms",
+      "health-and-hygiene-claims",
+      "html-compliance",
+      "no-value-found-handling",
+      "response-structure"
+    ]
+  },
+  "test_case_summary": {
+    "british-english-and-tone": 7,
+    "flavour-list-handling": 7,
+    "forbidden-words-and-synonyms": 7,
+    "health-and-hygiene-claims": 7,
+    "html-compliance": 7,
+    "no-value-found-handling": 7,
+    "response-structure": 7
+  }
+}

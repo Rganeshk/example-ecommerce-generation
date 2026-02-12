@@ -12,8 +12,6 @@ venv/
 # But allow test_cases directory for CI/CD
 .specalign/*
 !.specalign/test_cases/
-!.specalign/test_cases/*.yaml
-!.specalign/test_cases/*.yml
 
 # Environment variables
 .env
