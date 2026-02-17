@@ -57,8 +57,17 @@ jobs:
           cat promptfoo-output/SUMMARY.md >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "---" >> $GITHUB_STEP_SUMMARY
-          echo "**Full analysis (tables, why tests failed, what to fix):** Download the \`promptfoo-results\` artifact and open **analysis.html** in a browser." >> $GITHUB_STEP_SUMMARY
+          DASHBOARD_URL="https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/analysis.html"
+          echo "**Dashboard:** [View analysis](${DASHBOARD_URL}) (tables, why tests failed, what to fix)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "*(Also: download the \`promptfoo-results\` artifact for \`report.html\` and \`SUMMARY.md\`.)*" >> $GITHUB_STEP_SUMMARY
         fi
+
+    - name: Upload Pages artifact (for dashboard)
+      if: always() && (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'))
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: promptfoo-output/
 
     - name: Upload results
       if: always()
@@ -105,6 +114,7 @@ jobs:
             const fail = total - pass;
             const passRate = total > 0 ? ((pass / total) * 100).toFixed(1) : '0';
             const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+            const dashboardUrl = `https://${context.repo.owner}.github.io/${context.repo.repo}/analysis.html`;
             let rec = '';
             if (passRate < 40) rec = ' Consider semantic assertions and prompt improvements.';
             else if (passRate < 70) rec = ' Review specs with low pass rate; relax assertions or improve the prompt.';
@@ -112,7 +122,8 @@ jobs:
             const body = `## Prompt Evaluation Results\n\n` +
               `- **Total**: ${total} | **Passed**: ${pass} | **Failed**: ${fail} | **Pass rate**: ${passRate}%\n\n` +
               `**Recommendation:**${rec}\n\n` +
-              `**View the analysis:** Download the **promptfoo-results** artifact and open **\`analysis.html\`** in a browser for tables, failure reasons, and fix recommendations (e.g. change prompts). The artifact also includes \`report.html\` (interactive) and \`SUMMARY.md\`.\n\n` +
+              `**Dashboard:** [View analysis](${dashboardUrl}) (tables, failure reasons, fix recommendations)\n\n` +
+              `*(Download **promptfoo-results** artifact for \`report.html\`, \`analysis.html\`, \`SUMMARY.md\`.)*\n\n` +
               `[View run](${runUrl})`;
             
             github.rest.issues.createComment({
@@ -124,3 +135,18 @@ jobs:
           } else {
             console.log('No summary data found to comment');
           }
+
+  deploy-dashboard:
+    needs: evaluate
+    if: success() && github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
