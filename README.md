@@ -85,11 +85,14 @@ The repository includes a GitHub Actions workflow that:
 
 1. Go to **Actions** tab in GitHub
 2. Click on the latest workflow run and open the **evaluate** job
-3. At the end of the job **Summary** you’ll see a **Dashboard** link: **[Open analysis report](https://&lt;owner&gt;.github.io/&lt;repo&gt;/analysis.html)** — click it to open the analysis (tables, why tests failed, what to fix) in your browser
-4. Download the **promptfoo-results** artifact for `report.html`, `analysis.html`, and `SUMMARY.md`
-5. On pull requests, the workflow posts a comment with pass rate, recommendation, and the same dashboard link
+3. Open the job **Summary** to see the evaluation summary
+4. Download the **promptfoo-results** artifact and open:
+   - `analysis.html` — tables, pass-rate bar, why tests failed, and what to fix
+   - `report.html` — interactive promptfoo report
+   - `SUMMARY.md` — result summary by specification and recommendations
+5. On pull requests, the workflow posts a comment with pass rate, recommendation, and a note to download the artifact for the full analysis
 
-**Note:** The job **fails** when any test fails (so CI is red). The dashboard link is still generated so you can open the analysis from the run. Enable **Settings → Pages → Source: GitHub Actions** so the dashboard URL works.
+**Note:** The job **fails** when any test fails (so CI is red). The full analysis remains available in the `promptfoo-results` artifact.
 
 ## Workflow Commands
 
