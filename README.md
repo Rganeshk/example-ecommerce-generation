@@ -115,6 +115,19 @@ To get **results and recommendations in the terminal** in one go:
 
 This runs the eval, generates `promptfoo-output/SUMMARY.md` (with per-spec stats and recommendations) and `promptfoo-output/analysis.html` (tables, failure reasons, and fix tips), and **prints the summary to the terminal**. It also writes `promptfoo-output/report.html` and `promptfoo-output/results.json`.
 
+### Optional: Self-refine brittle assertions (one-shot)
+
+After an eval, you can have an LLM rewrite only the failing assertions to be less strict, then re-run eval:
+
+```bash
+./scripts/run-eval-with-summary.sh    # run once to get results.json
+./scripts/refine-and-retest.sh       # extract failures → LLM refines → writes *_refined.yaml → re-evals
+```
+
+- **extract-failures.js**: reads `results.json`, writes `promptfoo-output/failures.json` (test index, input/output snippet, failing assertion, reason).
+- **refine-assertions.js**: reads `failures.json`, calls OpenAI to get refined assertions, patches the test YAML (writes `*_refined.yaml`). Requires `OPENAI_API_KEY`.
+- **refine-and-retest.sh**: runs extract → refine → eval on the refined file and regenerates the summary/analysis.
+
 To run only promptfoo (no summary/recommendations):
 
 ```bash
